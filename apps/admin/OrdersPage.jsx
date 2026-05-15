@@ -391,8 +391,16 @@ function OrderDrawer({ order, onClose }) {
     },
   });
   const refundMutation = useMutation({
-    mutationFn: () =>
-      apiRefund({ id: order.id, amount: parseFloat(refundAmount) }),
+    mutationFn: () => {
+      const parsedAmount = parseFloat(refundAmount);
+      if (!Number.isFinite(parsedAmount) || parsedAmount <= 0) {
+        throw new Error("Invalid refund amount");
+      }
+      return apiRefund({
+        id: order.id,
+        amount: parsedAmount,
+      });
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["orders"] });
       onClose();
@@ -412,9 +420,11 @@ function OrderDrawer({ order, onClose }) {
     setRefundAmount(String(Math.min(num, order.total)));
   };
 
-  const parsedRefund = parseFloat(refundAmount) || 0;
-  const refundValid = parsedRefund > 0 && parsedRefund <= order.total;
-
+  const parsedRefund = Number(refundAmount);
+  const refundValid =
+  Number.isFinite(parsedRefund) &&
+  parsedRefund > 0 &&
+  parsedRefund <= order.total;
   const canFulfill = ["pending", "processing"].includes(order.status);
   const canCancel = ["pending", "processing"].includes(order.status);
   const canRefund = ["delivered", "shipped"].includes(order.status);
